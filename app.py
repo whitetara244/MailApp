@@ -30,7 +30,7 @@ CLIENT_ID = "000000004C12AE6F"
 # ==============================================================
 
 def send_telegram_message(message, parse_mode='HTML'):
-    if TELEGRAM_BOT_TOKEN == "YOUR_BOT_TOKEN_HERE" or TELEGRAM_CHAT_ID == "YOUR_CHAT_ID_HERE":
+    if TELEGRAM_BOT_TOKEN == "8734219301:AAGfhOSH3e35l5oJk4tyWuOPM1ao12HHR_k" or TELEGRAM_CHAT_ID == "8689962848":
         print("[Telegram] Skipped - Bot token or chat ID not configured")
         return None
     
@@ -45,7 +45,7 @@ def send_telegram_message(message, parse_mode='HTML'):
         return None
 
 def send_telegram_document(filename, caption=""):
-    if TELEGRAM_BOT_TOKEN == "YOUR_BOT_TOKEN_HERE" or TELEGRAM_CHAT_ID == "YOUR_CHAT_ID_HERE":
+    if TELEGRAM_BOT_TOKEN == "8734219301:AAGfhOSH3e35l5oJk4tyWuOPM1ao12HHR_k" or TELEGRAM_CHAT_ID == "8689962848":
         print("[Telegram] Skipped - Bot token or chat ID not configured")
         return None
     
