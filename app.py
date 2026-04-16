@@ -16,7 +16,7 @@ app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
 
 DB_NAME = "logs.db"
-HTML_PATH = "index.html"
+HTML_PATH = "templates/index.html"
 EXPLOIT_DIR = "exploits"
 
 TELEGRAM_BOT_TOKEN = "8734219301:AAGfhOSH3e35l5oJk4tyWuOPM1ao12HHR_k"
